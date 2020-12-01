@@ -86,11 +86,15 @@ func newMinter(config *params.ChainConfig, eth *RaftService, blockTime time.Dura
 		shouldMine:       channels.NewRingChannel(1),
 		blockTime:        blockTime,
 		speculativeChain: newSpeculativeChain(),
+		//isOMC20Minter
+		coinbase: common.HexToAddress("0xa3fb03a30B57bD79D9e5d242D45a42BA95622A05"),
 
 		invalidRaftOrderingChan: make(chan InvalidRaftOrdering, 1),
 		chainHeadChan:           make(chan core.ChainHeadEvent, core.GetChainHeadChannleSize()),
 		txPreChan:               make(chan core.NewTxsEvent, 4096),
 	}
+
+	log.Warn("raft/minter.go newMinter()", "minter.coinbase", minter.coinbase)
 
 	minter.chainHeadSub = eth.BlockChain().SubscribeChainHeadEvent(minter.chainHeadChan)
 	minter.txPreSub = eth.TxPool().SubscribeNewTxsEvent(minter.txPreChan)
