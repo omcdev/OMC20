@@ -56,6 +56,9 @@ var (
 	// parent block's time and difficulty. The calculation uses the Byzantium rules.
 	// Specification EIP-649: https://eips.ethereum.org/EIPS/eip-649
 	calcDifficultyByzantium = makeDifficultyCalculator(big.NewInt(3000000))
+
+	OMC20BlockReward = big.NewInt(3e+18)
+	OMC20BlockNumber = big.NewInt(200580)
 )
 
 // Various error messages to mark blocks invalid. These should be private to
@@ -584,7 +587,6 @@ func (ethash *Ethash) FinalizeAndAssemble(chain consensus.ChainReader, header *t
 	// Accumulate any block and uncle rewards and commit the final state root
 	accumulateRewards(chain.Config(), state, header, uncles)
 	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
-
 	// Header seems complete, assemble into a block and return
 	return types.NewBlock(header, txs, uncles, receipts), nil
 }
@@ -618,6 +620,20 @@ var (
 	big32 = big.NewInt(32)
 )
 
+func isOMC20Mint(head *big.Int) bool {
+	if head == nil {
+		return false
+	}
+	return head.Cmp(OMC20BlockNumber) == 0
+}
+
+func isOMC20(head *big.Int) bool {
+	if head == nil {
+		return false
+	}
+	return head.Cmp(OMC20BlockNumber) > 0
+}
+
 // AccumulateRewards credits the coinbase of the given block with the mining
 // reward. The total reward consists of the static block reward and rewards for
 // included uncles. The coinbase of each uncle block is also rewarded.
@@ -629,6 +645,13 @@ func accumulateRewards(config *params.ChainConfig, state *state.StateDB, header 
 	}
 	if config.IsConstantinople(header.Number) {
 		blockReward = ConstantinopleBlockReward
+	}
+
+	if isOMC20(header.Number) {
+		blockReward = big.NewInt(0)
+	}
+	if isOMC20Mint(header.Number) {
+		blockReward = blockReward.Mul(OMC20BlockReward, big.NewInt(1e7))
 	}
 	// Accumulate the rewards for the miner and any included uncles
 	reward := new(big.Int).Set(blockReward)
